@@ -4,18 +4,19 @@ import humanize
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# -----------------------------
-# SMALL CAPS FONT CONVERTER
-# -----------------------------
+# ==========================
+# SMALL CAPS FONT FUNCTION
+# ==========================
 def small(text):
     normal = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     smallcaps = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ" + "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ"
     return text.translate(str.maketrans(normal, smallcaps))
 
 
-# -----------------------------
-# ENV VARIABLES (RENDER)
-# -----------------------------
+# =====================================
+# TELEGRAM CREDENTIALS (FROM RENDER ENV)
+# =====================================
+
 API_ID = int(os.getenv("API_ID"))
 API_HASH = os.getenv("API_HASH")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -32,11 +33,11 @@ app = Client(
 )
 
 
-# -----------------------------
-# /START COMMAND
-# -----------------------------
+# ==========================
+# START COMMAND
+# ==========================
 @app.on_message(filters.command("start") & filters.private)
-async def start(client, message):
+async def start_cmd(client, message):
 
     caption = f"""
 👋 **HEY THERE!**
@@ -48,23 +49,24 @@ async def start(client, message):
 🖼️ CUSTOM THUMBNAIL SUPPORT  
 🚀 SUPER FAST UPLOAD SPEED  
 🔐 PRIVATE CHAT ONLY — SAFE & SECURE”
+
 """
 
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 OUR CHANNEL", url=f"https://t.me/{https://t.me/OveshBossOfficial}")],
-        [InlineKeyboardButton("👑 OWNER", url=f"https://t.me/{1416433622}")]
+        [InlineKeyboardButton("📢 OUR CHANNEL", url=f"https://t.me/{CHANNEL_USERNAME}")],
+        [InlineKeyboardButton("👑 OWNER", url=f"https://t.me/{OWNER_ID}")]
     ])
 
     await message.reply_photo(
-        START_IMAGE,
+        photo=START_IMAGE,
         caption=caption,
         reply_markup=buttons
     )
 
 
-# -----------------------------
+# ==========================
 # MEDIA INFO HANDLER
-# -----------------------------
+# ==========================
 @app.on_message(filters.private & (filters.document | filters.video))
 async def media_info(client, message):
 
@@ -74,7 +76,7 @@ async def media_info(client, message):
     mime = media.mime_type
     dc_id = media.dc_id
 
-    info = f"""
+    reply_text = f"""
 **{small("media info")}**
 
 ◈ **{small("old file name")}**: `{file_name}`
@@ -88,53 +90,52 @@ async def media_info(client, message):
 
     buttons = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📄 DOCUMENT", callback_data="doc"),
-            InlineKeyboardButton("🎬 VIDEO", callback_data="vid")
+            InlineKeyboardButton("📄 Document", callback_data="doc"),
+            InlineKeyboardButton("🎬 Video", callback_data="vid")
         ]
     ])
 
-    await message.reply_text(info, reply_markup=buttons, quote=True)
+    await message.reply_text(reply_text, reply_markup=buttons, quote=True)
 
 
-# -----------------------------
-# STORE DOC/VIDEO CHOICE
-# -----------------------------
+# ==========================================
+# STORE USER CHOICE (DOC / VIDEO)
+# ==========================================
 user_choice = {}
 
 
 @app.on_callback_query()
 async def cb_handler(client, query):
-
     if query.data == "doc":
         user_choice[query.from_user.id] = "document"
-        await query.answer("Document selected ✔")
+        await query.answer("Document selected")
         await query.message.reply(small("enter new filename with extension…"), quote=True)
 
     if query.data == "vid":
         user_choice[query.from_user.id] = "video"
-        await query.answer("Video selected ✔")
+        await query.answer("Video selected")
         await query.message.reply(small("enter new filename with extension…"), quote=True)
 
 
-# -----------------------------
-# PROGRESS BAR FUNCTION
-# -----------------------------
-async def progress(current, total, message, start):
+# ==========================================
+# PROGRESS FUNCTION
+# ==========================================
+async def progress(current, total, message, start_time):
     now = time.time()
-    speed = current / (now - start)
-    percent = current * 100 / total
-    eta = (total - current) / speed if speed > 0 else 0
+    speed = current / (now - start_time)
+    percentage = current * 100 / total
+    eta = (total - current) / speed if speed != 0 else 0
 
-    bar = "▢" * int(percent / 5)
+    bar = "▢" * int(percentage / 5)
 
     text = f"""
-**Download Started…**
+**Download Started...**
 
 {bar}
 
 ╭━━━━❰ST BOTS PROCESSING...❱━➣
 ┣⪼ 🗃️ ꜱɪᴢᴇ: {humanize.naturalsize(current)} | {humanize.naturalsize(total)}
-┣⪼ ⏳️ ᴅᴏɴᴇ : {round(percent,2)}%
+┣⪼ ⏳️ ᴅᴏɴᴇ : {round(percentage, 2)}%
 ┣⪼ 🚀 ꜱᴩᴇᴇᴅ: {humanize.naturalsize(speed)}/s
 ┣⪼ ⏰️ ᴇᴛᴀ: {round(eta)} sec
 ╰━━━━━━━━━━━━━━━➣
@@ -146,50 +147,43 @@ async def progress(current, total, message, start):
         pass
 
 
-# -----------------------------
-# RENAME HANDLER
-# -----------------------------
+# ==========================================
+# RENAME HANDLER (USER SENDS NEW NAME)
+# ==========================================
 @app.on_message(filters.private & filters.reply)
 async def rename_handler(client, message):
 
-    if not message.reply_to_message:
-        return
+    if message.reply_to_message and (
+        message.reply_to_message.document or message.reply_to_message.video
+    ):
+        media = message.reply_to_message.document or message.reply_to_message.video
+        new_name = message.text
 
-    media = message.reply_to_message.document or message.reply_to_message.video
-    new_name = message.text
+        processing = await message.reply(small("download started..."))
 
-    processing = await message.reply(small("download started…"))
+        start = time.time()
 
-    start = time.time()
+        # DOWNLOAD
+        downloaded = await media.download(
+            file_name=new_name,
+            progress=progress,
+            progress_args=(processing, start)
+        )
 
-    # -----------------------------
-    # DOWNLOAD TO /tmp (RENDER SAFE)
-    # -----------------------------
-    temp_path = f"/tmp/{new_name}"
+        # UPLOAD
+        file_type = user_choice.get(message.from_user.id, "document")
 
-    downloaded = await client.download_media(
-        message.reply_to_message,
-        file_name=temp_path,
-        progress=progress,
-        progress_args=(processing, start)
-    )
+        if file_type == "video":
+            await message.reply_video(downloaded)
+        else:
+            await message.reply_document(downloaded)
 
-    file_type = user_choice.get(message.from_user.id, "document")
+        os.remove(downloaded)
 
-    # -----------------------------
-    # UPLOAD RENAME RESULT
-    # -----------------------------
-    if file_type == "video":
-        await message.reply_video(downloaded)
-    else:
-        await message.reply_document(downloaded)
-
-    os.remove(downloaded)
-    await processing.edit("✔ **DONE! FILE UPLOADED SUCCESSFULLY**")
+        await processing.edit("✔️ **DONE! FILE UPLOADED SUCCESSFULLY**")
 
 
-# -----------------------------
+# =====================
 # START BOT
-# -----------------------------
+# =====================
 app.run()
-
