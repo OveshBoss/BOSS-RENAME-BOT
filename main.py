@@ -51,7 +51,7 @@ async def start(client, message):
 """
 
     buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 OUR CHANNEL", url=f"https://t.me/{@OveshBossOfficial}")],
+        [InlineKeyboardButton("📢 OUR CHANNEL", url=f"https://t.me/{https://t.me/OveshBossOfficial}")],
         [InlineKeyboardButton("👑 OWNER", url=f"https://t.me/{1416433622}")]
     ])
 
