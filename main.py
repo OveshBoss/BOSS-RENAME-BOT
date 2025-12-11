@@ -1,6 +1,5 @@
 import os
 import time
-import humanize
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -70,7 +69,7 @@ async def media_info(client, message):
 
     media = message.document or message.video
     file_name = media.file_name
-    file_size = humanize.naturalsize(media.file_size)
+    file_size = f"{media.file_size} bytes"
     mime = media.mime_type
     dc_id = media.dc_id
 
@@ -133,9 +132,9 @@ async def progress(current, total, message, start):
 {bar}
 
 ╭━━━━❰ST BOTS PROCESSING...❱━➣
-┣⪼ 🗃️ ꜱɪᴢᴇ: {humanize.naturalsize(current)} | {humanize.naturalsize(total)}
+┣⪼ 🗃️ ᴛᴏᴛᴀʟ: {int(current)} / {int(total)} bytes
 ┣⪼ ⏳️ ᴅᴏɴᴇ : {round(percent,2)}%
-┣⪼ 🚀 ꜱᴩᴇᴇᴅ: {humanize.naturalsize(speed)}/s
+┣⪼ 🚀 ꜱᴩᴇᴇᴅ: {int(speed)}/s
 ┣⪼ ⏰️ ᴇᴛᴀ: {round(eta)} sec
 ╰━━━━━━━━━━━━━━━➣
 """
