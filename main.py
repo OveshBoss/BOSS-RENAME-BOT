@@ -1,109 +1,195 @@
 import os
+import time
+import humanize
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-import ffmpeg
 
-api_id = int(os.environ.get("API_ID"))
-api_hash = os.environ.get("API_HASH")
-bot_token = os.environ.get("BOT_TOKEN")
-owner = os.environ.get("OWNER_ID")
-channel = os.environ.get("CHANNEL_USERNAME")
-start_image = os.environ.get("START_IMAGE")
-
-app = Client("rename-bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
+# -----------------------------
+# SMALL CAPS FONT CONVERTER
+# -----------------------------
+def small(text):
+    normal = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    smallcaps = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ" + "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ"
+    return text.translate(str.maketrans(normal, smallcaps))
 
 
-# ------------------ START COMMAND ------------------
+# -----------------------------
+# ENV VARIABLES (RENDER)
+# -----------------------------
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+OWNER_ID = os.getenv("OWNER_ID")
+CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME")
+START_IMAGE = os.getenv("START_IMAGE")
+
+app = Client(
+    "RenameBot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN
+)
+
+
+# -----------------------------
+# /START COMMAND
+# -----------------------------
 @app.on_message(filters.command("start") & filters.private)
 async def start(client, message):
 
-    buttons = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📢 ᴏᴜʀ ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/{channel}")],
-            [InlineKeyboardButton("👑 ᴏᴡɴᴇʀ", url=f"https://t.me/{owner}")]
-        ]
+    caption = f"""
+👋 **HEY THERE!**
+
+**I AM A POWERFUL RENAME + CONVERT BOT WITH PREMIUM FEATURES ⚡**
+
+“⭐ RENAME ANY FILE IN SECONDS  
+🎥 AUTO VIDEO RECODE / CONVERT  
+🖼️ CUSTOM THUMBNAIL SUPPORT  
+🚀 SUPER FAST UPLOAD SPEED  
+🔐 PRIVATE CHAT ONLY — SAFE & SECURE”
+"""
+
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 OUR CHANNEL", url=f"https://t.me/{@OveshBossOfficial}")],
+        [InlineKeyboardButton("👑 OWNER", url=f"https://t.me/{1416433622}")]
+    ])
+
+    await message.reply_photo(
+        START_IMAGE,
+        caption=caption,
+        reply_markup=buttons
     )
 
-    caption = (
-        "**ʜᴇʏ ᴛʜᴇʀᴇ 👋\n"
-        "ɪ ᴀᴍ ᴀ ᴘᴏᴡᴇʀꜰᴜʟ ʀᴇɴᴀᴍᴇ + ᴄᴏɴᴠᴇʀᴛ ʙᴏᴛ ᴡɪᴛʜ ᴘʀᴇᴍɪᴜᴍ ꜰᴇᴀᴛᴜʀᴇꜱ ⚡**"
-        "\n\n"
-        "“🌟 ʀᴇɴᴀᴍᴇ ᴀɴʏ ꜰɪʟᴇ ɪɴ ꜱᴇᴄᴏɴᴅꜱ\n"
-        "📺 ᴀᴜᴛᴏ ᴠɪᴅᴇᴏ ʀᴇᴄᴏᴅᴇ / ᴄᴏɴᴠᴇʀᴛ\n"
-        "🖼 ᴄᴜꜱᴛᴏᴍ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴜᴘᴘᴏʀᴛ\n"
-        "📤 ꜰᴀꜱᴛ ᴜᴘʟᴏᴀᴅ ꜱᴘᴇᴇᴅ\n"
-        "🔐 ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ ᴏɴʟʏ — ꜱᴀꜰᴇ & ꜱᴇᴄᴜʀᴇ”"
-    )
 
-    try:
-        await message.reply_photo(start_image, caption=caption, reply_markup=buttons)
-    except:
-        await message.reply_text(caption, reply_markup=buttons)
-
-
-# ------------------ SAVE THUMBNAIL ------------------
-
-@app.on_message(filters.photo & filters.private)
-async def save_thumb(client, message):
-    os.makedirs("thumb", exist_ok=True)
-    path = f"thumb/{message.from_user.id}.jpg"
-    await message.download(path)
-    await message.reply_text("✅ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴀᴠᴇᴅ ꜱᴜᴄᴄᴇꜱꜰᴜʟʟʏ!")
-
-
-# ------------------ MAIN RENAME + CONVERT ------------------
-
+# -----------------------------
+# MEDIA INFO HANDLER
+# -----------------------------
 @app.on_message(filters.private & (filters.document | filters.video))
-async def rename_handler(client, message):
+async def media_info(client, message):
 
     media = message.document or message.video
+    file_name = media.file_name
+    file_size = humanize.naturalsize(media.file_size)
+    mime = media.mime_type
+    dc_id = media.dc_id
 
-    await message.reply_text(
-        f"📄 **ᴏʟᴅ ɴᴀᴍᴇ:** `{media.file_name}`\n\n"
-        "📝 **ꜱᴇɴᴅ ɴᴇᴡ ꜰɪʟᴇ ɴᴀᴍᴇ (ᴡɪᴛʜ ᴇxᴛᴇɴꜱɪᴏɴ)**"
+    info = f"""
+**{small("media info")}**
+
+◈ **{small("old file name")}**: `{file_name}`
+◈ **{small("extension")}**: `{mime.split('/')[-1].upper()}`
+◈ **{small("file size")}**: {file_size}
+◈ **{small("mime type")}**: `{mime}`
+◈ **{small("dc id")}**: `{dc_id}`
+
+{small("please enter the new filename with extension and reply this message…")}
+"""
+
+    buttons = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📄 DOCUMENT", callback_data="doc"),
+            InlineKeyboardButton("🎬 VIDEO", callback_data="vid")
+        ]
+    ])
+
+    await message.reply_text(info, reply_markup=buttons, quote=True)
+
+
+# -----------------------------
+# STORE DOC/VIDEO CHOICE
+# -----------------------------
+user_choice = {}
+
+
+@app.on_callback_query()
+async def cb_handler(client, query):
+
+    if query.data == "doc":
+        user_choice[query.from_user.id] = "document"
+        await query.answer("Document selected ✔")
+        await query.message.reply(small("enter new filename with extension…"), quote=True)
+
+    if query.data == "vid":
+        user_choice[query.from_user.id] = "video"
+        await query.answer("Video selected ✔")
+        await query.message.reply(small("enter new filename with extension…"), quote=True)
+
+
+# -----------------------------
+# PROGRESS BAR FUNCTION
+# -----------------------------
+async def progress(current, total, message, start):
+    now = time.time()
+    speed = current / (now - start)
+    percent = current * 100 / total
+    eta = (total - current) / speed if speed > 0 else 0
+
+    bar = "▢" * int(percent / 5)
+
+    text = f"""
+**Download Started…**
+
+{bar}
+
+╭━━━━❰ST BOTS PROCESSING...❱━➣
+┣⪼ 🗃️ ꜱɪᴢᴇ: {humanize.naturalsize(current)} | {humanize.naturalsize(total)}
+┣⪼ ⏳️ ᴅᴏɴᴇ : {round(percent,2)}%
+┣⪼ 🚀 ꜱᴩᴇᴇᴅ: {humanize.naturalsize(speed)}/s
+┣⪼ ⏰️ ᴇᴛᴀ: {round(eta)} sec
+╰━━━━━━━━━━━━━━━➣
+"""
+
+    try:
+        await message.edit(text)
+    except:
+        pass
+
+
+# -----------------------------
+# RENAME HANDLER
+# -----------------------------
+@app.on_message(filters.private & filters.reply)
+async def rename_handler(client, message):
+
+    if not message.reply_to_message:
+        return
+
+    media = message.reply_to_message.document or message.reply_to_message.video
+    new_name = message.text
+
+    processing = await message.reply(small("download started…"))
+
+    start = time.time()
+
+    # -----------------------------
+    # DOWNLOAD TO /tmp (RENDER SAFE)
+    # -----------------------------
+    temp_path = f"/tmp/{new_name}"
+
+    downloaded = await client.download_media(
+        message.reply_to_message,
+        file_name=temp_path,
+        progress=progress,
+        progress_args=(processing, start)
     )
 
-    new_msg = await client.listen(message.chat.id)
-    new_name = new_msg.text
+    file_type = user_choice.get(message.from_user.id, "document")
 
-    msg = await message.reply("⬇ **ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ꜰɪʟᴇ...**")
-
-    original = await client.download_media(media)
-    new_file = f"downloads/{new_name}"
-    os.makedirs("downloads", exist_ok=True)
-
-    # if video → convert using ffmpeg
-    if media.mime_type.startswith("video"):
-        await msg.edit("🎞 **ᴄᴏɴᴠᴇʀᴛɪɴɢ ᴠɪᴅᴇᴏ...**")
-
-        (
-            ffmpeg
-            .input(original)
-            .output(new_file, vcodec='libx264', acodec='aac')
-            .run(overwrite_output=True)
-        )
-        os.remove(original)
-
+    # -----------------------------
+    # UPLOAD RENAME RESULT
+    # -----------------------------
+    if file_type == "video":
+        await message.reply_video(downloaded)
     else:
-        os.rename(original, new_file)
+        await message.reply_document(downloaded)
 
-    # load thumbnail if available
-    thumb_path = f"thumb/{message.from_user.id}.jpg"
-    thumb = thumb_path if os.path.exists(thumb_path) else None
-
-    await msg.edit("⬆ **ᴜᴘʟᴏᴀᴅɪɴɢ...**")
-
-    await message.reply_document(
-        new_file,
-        caption="✔ **ꜰɪʟᴇ ᴘʀᴏᴄᴇꜱꜱᴇᴅ ꜱᴜᴄᴄᴇꜱꜰᴜʟʟʏ!**",
-        thumb=thumb
-    )
-
-    os.remove(new_file)
+    os.remove(downloaded)
+    await processing.edit("✔ **DONE! FILE UPLOADED SUCCESSFULLY**")
 
 
-# ------------------ RUN APP ------------------
-
+# -----------------------------
+# START BOT
+# -----------------------------
 app.run()
 
